@@ -52,6 +52,15 @@ ARG CGO_CFLAGS
 ARG AMDGPU_TARGETS
 RUN OLLAMA_SKIP_CPU_GENERATE=1 sh gen_linux.sh
 
+FROM --platform=linux/amd64 intel/oneapi-basekit:2024.0.1-devel-rockylinux9 AS oneapi-build-amd64
+ARG CMAKE_VERSION
+COPY ./scripts/rh_linux_deps.sh /
+RUN CMAKE_VERSION=${CMAKE_VERSION} sh /rh_linux_deps.sh
+COPY --from=llm-code / /go/src/github.com/jmorganca/ollama/
+WORKDIR /go/src/github.com/jmorganca/ollama/llm/generate
+ARG CGO_CFLAGS
+RUN OLLAMA_SKIP_CPU_GENERATE=1 sh gen_linux.sh
+
 FROM --platform=linux/amd64 centos:7 AS cpu-builder-amd64
 ARG CMAKE_VERSION
 ARG GOLANG_VERSION
@@ -93,6 +102,7 @@ COPY --from=cpu_avx2-build-amd64 /go/src/github.com/jmorganca/ollama/llm/llama.c
 COPY --from=cuda-build-amd64 /go/src/github.com/jmorganca/ollama/llm/llama.cpp/build/linux/ llm/llama.cpp/build/linux/
 COPY --from=rocm-5-build-amd64 /go/src/github.com/jmorganca/ollama/llm/llama.cpp/build/linux/ llm/llama.cpp/build/linux/
 COPY --from=rocm-6-build-amd64 /go/src/github.com/jmorganca/ollama/llm/llama.cpp/build/linux/ llm/llama.cpp/build/linux/
+COPY --from=oneapi-build-amd64 /go/src/github.com/jmorganca/ollama/llm/llama.cpp/build/linux/ llm/llama.cpp/build/linux/
 ARG GOFLAGS
 ARG CGO_CFLAGS
 RUN go build .
@@ -126,13 +136,21 @@ ENV OLLAMA_HOST 0.0.0.0
 ENTRYPOINT ["/bin/ollama"]
 CMD ["serve"]
 
+# oneAPI images are much larger so we keep it distinct from the CPU/CUDA image
+FROM --platform=linux/amd64 intel/oneapi-runtime:2024.0.1-devel-rockylinux9 as runtime-oneapi
+COPY --from=build-amd64 /go/src/github.com/jmorganca/ollama/ollama /bin/ollama
+EXPOSE 11434
+ENV OLLAMA_HOST 0.0.0.0
+
+ENTRYPOINT ["/bin/ollama"]
+CMD ["serve"]
+
 FROM runtime-$TARGETARCH
 EXPOSE 11434
 ENV OLLAMA_HOST 0.0.0.0
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
-ENV NVIDIA_VISIBLE_DEVICES=all
 
 ENTRYPOINT ["/bin/ollama"]
 CMD ["serve"]
