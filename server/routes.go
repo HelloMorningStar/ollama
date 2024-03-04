@@ -44,7 +44,7 @@ func init() {
 	case gin.ReleaseMode:
 	case gin.TestMode:
 	default:
-		mode = gin.DebugMode
+		mode = gin.ReleaseMode
 	}
 
 	gin.SetMode(mode)
