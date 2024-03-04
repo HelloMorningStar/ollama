@@ -202,9 +202,9 @@ fi
 if [ -d "${ONEAPI_ROOT}" ]; then
     echo "OneAPI libraries detected - building dynamic OneAPI library"
     init_vars
-    source ${ONEAPI_ROOT}/setvars.sh --force # set up environment variables for oneAPI
+    source ${ONEAPI_ROOT}/setvars.sh # set up environment variables for oneAPI
     CC=icx
-    CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS} -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -DLLAMA_SYCL=ON -DLLAMA_SYCL_F16=ON"
+    CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS} -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -DLLAMA_SYCL=ON -DLLAMA_SYCL_F16=OFF"
     BUILD_DIR="${LLAMACPP_DIR}/build/linux/${ARCH}/oneapi"
     EXTRA_LIBS="-fsycl -Wl,-rpath,${ONEAPI_ROOT}/compiler/latest/lib,-rpath,${ONEAPI_ROOT}/mkl/latest/lib,-rpath,${ONEAPI_ROOT}/tbb/latest/lib,-rpath,${ONEAPI_ROOT}/compiler/latest/opt/oclfpga/linux64/lib -lOpenCL -lmkl_core -lmkl_sycl_blas -lmkl_intel_ilp64 -lmkl_tbb_thread -ltbb"
     DEBUG_FLAGS="" # icx compiles with -O0 if we pass -g, so we must remove it
